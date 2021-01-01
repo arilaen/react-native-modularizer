@@ -5,9 +5,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "ern-typescript && ern-copyfiles",
-    "instrument": "yarn nyc instrument dist --in-place && ern-copyfiles",
-    "prepublish": "yarn run build",
+    "android": "console.log('Not yet implemented')",
+    "ios": "console.log('Not yet implemented')"
   },
   "repository": {
     "type": "git",
@@ -21,7 +20,7 @@
     "semver": "^6.0.0"
   },
   "devDependencies": {
-    "copyfiles": "^2.3.0",
+    "copyfiles": "^2.3.0"
   },
   "engines": {
     "node": ">=13"
