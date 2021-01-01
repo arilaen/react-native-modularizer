@@ -1,0 +1,40 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion {{{compileSdkVersion}}}
+    buildToolsVersion "{{{buildToolsVersion}}}"
+    defaultConfig {
+        minSdkVersion {{{minSdkVersion}}}
+        targetSdkVersion {{{targetSdkVersion}}}
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.{{{sourceCompatibility}}}
+        targetCompatibility JavaVersion.{{{targetCompatibility}}}
+    }
+    configurations.all {
+        resolutionStrategy.force 'com.google.code.findbugs:jsr305:3.0.0'
+    }
+    sourceSets.main {
+        res.srcDirs = [ {{{resSrcDirs}}} ]
+    }
+    lintOptions {
+        abortOnError false
+    }
+}
+
+dependencies {
+{{#implementations}}
+    {{{.}}}
+{{/implementations}}
+}
+
+gradle.projectsEvaluated {
+    android.buildTypes.each {
+        it.resValue 'string', "CODE_PUSH_APK_BUILD_TIME", Long.toString(System.currentTimeMillis())
+    }
+}

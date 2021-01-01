@@ -1,0 +1,39 @@
+{
+  "name": "react-native-modularizer",
+  "version": "1.0.0",
+  "description": "A utility to export React Native projects as modules for native apps to use.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "ern-typescript && ern-copyfiles",
+    "instrument": "yarn nyc instrument dist --in-place && ern-copyfiles",
+    "prepublish": "yarn run build",
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HomeTurf-LLC/react-native-modularizer.git"
+  },
+  "dependencies": {
+    "decompress-zip": "^0.3.1",
+    "fs-extra": "^8.1.0",
+    "fs-readdir-recursive": "^1.1.0",
+    "lodash": "^4.17.19",
+    "semver": "^6.0.0"
+  },
+  "devDependencies": {
+    "copyfiles": "^2.3.0",
+  },
+  "engines": {
+    "node": ">=13"
+  },
+  "copyFiles": [
+    {
+      "source": "src/hull",
+      "dest": "dist"
+    },
+    {
+      "source": "src/templates",
+      "dest": "dist"
+    }
+  ]
+}
