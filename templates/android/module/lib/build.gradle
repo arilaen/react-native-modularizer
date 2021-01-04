@@ -1,0 +1,100 @@
+apply plugin: "com.android.library"
+apply plugin: "maven"
+apply plugin: "maven-publish"
+apply plugin: "com.mobbeel.plugin"
+{{#customPlugins}}
+    apply plugin: "{{.}}"
+{{/customPlugins}}
+
+android {
+    compileSdkVersion {{{compileSdkVersion}}}
+    buildToolsVersion "{{{buildToolsVersion}}}"
+    {{extraAndroidContent}}
+    defaultConfig {
+        minSdkVersion {{{minSdkVersion}}}
+        targetSdkVersion {{{targetSdkVersion}}}
+        versionCode {{{versionCode}}}
+        versionName "{{{versionName}}}"
+        multiDexEnabled {{{multiDexEnabled}}}
+    }
+    buildTypes {
+        {{{buildTypesBlock}}}
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.{{{sourceCompatibility}}}
+        targetCompatibility JavaVersion.{{{targetCompatibility}}}
+    }
+    configurations.all {
+        resolutionStrategy.force 'com.google.code.findbugs:jsr305:3.0.0'
+    }
+    sourceSets.main {
+        res.srcDirs = [ {{{resSrcDirs}}} ]
+    }
+    lintOptions {
+        abortOnError false
+    }
+    {{{extraAndroidContent}}}
+}
+
+dependencies {
+  api "com.facebook.react:react-native:{{{reactNativeVersion}}}"
+
+  def hermesPath = "{{{relativePathToNodeModules}}}/hermes-engine/android/";
+  debugImplementation files(hermesPath + "hermes-debug.aar")
+  releaseImplementation files(hermesPath + "hermes-release.aar")
+{{#libDependencies}}
+    {{{.}}}
+{{/libDependencies}}
+}
+
+// fataar {
+//     /**
+//      * If transitive is true, local jar module and remote library's dependencies will be embed. (local aar module does not support)
+//      * If transitive is false, just embed first level dependency
+//      * Default value is false
+//      * @since 1.3.0
+//      */
+//     transitive = true
+// }
+
+afterEvaluate {
+ publishing {
+   publications {
+     // Creates a Maven publication called “debug”.
+     debug(MavenPublication) {
+       // Applies the component for the debug build variant.
+       from components.debug
+
+       groupId = 'com.hometurf.mobileapp'
+       artifactId = 'final-debug'
+       version = {{{versionName}}}
+     }
+     staging(MavenPublication) {
+       // Applies the component for the release build variant.
+       from components.staging
+
+       // You can then customize attributes of the publication as shown below.
+       groupId = 'com.hometurf.mobileapp'
+       artifactId = 'final-staging'
+       version = {{{versionName}}}
+     }
+     release(MavenPublication) {
+       // Applies the component for the release build variant.
+       from components.release
+
+       // You can then customize attributes of the publication as shown below.
+       groupId = 'com.hometurf.mobileapp'
+       artifactId = 'final-release'
+       version = {{{versionName}}}
+     }
+   }
+ }
+}
+
+aarPlugin {
+    includeAllInnerDependencies true  // It's false for default
+}
+
+// apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+// apply from: "../../node_modules/react-native/react.gradle"
+// apply from: "../../node_modules/react-native-code-push/android/codepush.gradle"

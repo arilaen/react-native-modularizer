@@ -3,7 +3,7 @@
     "target": "es2018",
     "lib": ["es2018"],
     "baseUrl": ".",
-    "typeRoots": ["node_modules/@types", "./typings"],
+    "typeRoots": ["node_modules/@types", "ern_src/android/typings"],
     "module": "commonjs",
     "moduleResolution": "node",
     "sourceMap": true,

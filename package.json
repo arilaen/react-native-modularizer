@@ -4,20 +4,42 @@
   "description": "A utility to export React Native projects as modules for native apps to use.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "bin/",
+    "src/",
+    "templates/"
+  ],
+  "bin": {
+    "@HomeTurf-LLC/react-native-modularizer": "bin/rnm",
+    "rnm": "bin/rnm"
+  },
   "scripts": {
     "android": "console.log('Not yet implemented')",
-    "ios": "console.log('Not yet implemented')"
+    "ios": "console.log('Not yet implemented')",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/HomeTurf-LLC/react-native-modularizer.git"
   },
   "dependencies": {
+    "arg": "5.0.0",
+    "chalk": "4.1.0",
     "decompress-zip": "^0.3.1",
+    "esm": "^3.2.25",
+    "execa": "4.0.3",
     "fs-extra": "^8.1.0",
     "fs-readdir-recursive": "^1.1.0",
+    "glob": "^7.1.6",
+    "inquirer": "^7.3.3",
+    "listr": "0.14.3",
     "lodash": "^4.17.19",
-    "semver": "^6.0.0"
+    "log-update": "^4.0.0",
+    "mustache": "^4.1.0",
+    "ncp": "2.0.0",
+    "semver": "^6.0.0",
+    "shelljs": "^0.8.4",
+    "untildify": "^4.0.0"
   },
   "devDependencies": {
     "copyfiles": "^2.3.0"

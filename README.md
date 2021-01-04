@@ -39,17 +39,46 @@ We have also taken inspiration from [react-native-brownfield](https://github.com
 
 2. `npm i`
 
-3. Create a `react-native-modularizer.config.json` file with the following properties (and create these repos as well on github etc.):
+3. Run `npm run rnm init` and/or create/update a `rnmrc.json` file with the following properties (and create these repos as well on github etc.):
 
 ```.sh
 {
-    "ios-repo": "$YOUR_IOS_REPO"
-    "ios-test": "$YOUR_IOS_TEST_REPO"
-    "ios-demo": "$YOUR_IOS_DEMO_REPO"
-    "android-maven-repo": "$YOUR_ANDROID_REPO"
-    "android-test": "$YOUR_ANDROID_TEST_REPO"
-    "android-demo": "$YOUR_ANDROID_DEMO_REPO"
-    "version-manifest-repo": "$YOUR_VERSION_MANIFEST_REPO"
+  "moduleName": "$MODULE_NAME",
+  "launchMode": "navigation|modal",
+  "android": {
+    "customBuildDependencies": [],
+    "customPlugins": [],
+    "resSrcDirs": [],
+    "implementations": [],
+    "sourceCompatibility": "VERSION_1_8",
+    "targetCompatibility": "VERSION_1_8",
+    "multiDexEnabled": "true|false",
+    "androidGradlePlugin": "4.2.0-beta02",
+    "local": {
+      "moduleRepo": "$LOCAL_ANDROID_MODULE_REPO",
+      "testRepo": "$LOCAL_ANDROID_TEST_REPO",
+      "demoRepo": "$LOCAL_ANDROID_DEMO_REPO"
+    },
+    "remote": {
+      "moduleRepo": "$REMOTE_ANDROID_MODULE_REPO",
+      "testRepo": "$REMOTE_ANDROID_TEST_REPO",
+      "demoRepo": "$REMOTE_ANDROID_DEMO_REPO"
+    }
+  },
+  "ios": {
+    "customBuildDependencies": [],
+    "local": {
+      "moduleRepo": "$LOCAL_IOS_MODULE_REPO",
+      "testRepo": "$LOCAL_IOS_TEST_REPO",
+      "demoRepo": "$LOCAL_IOS_DEMO_REPO"
+    },
+    "remote": {
+      "moduleRepo": "$REMOTE_IOS_MODULE_REPO",
+      "testRepo": "$REMOTE_IOS_TEST_REPO",
+      "demoRepo": "$REMOTE_IOS_DEMO_REPO"
+    }
+  },
+  "version-manifest-repo": "$VERSION_MANIFEST_REPO"
 }
 ```
 

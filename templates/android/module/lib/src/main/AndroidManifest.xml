@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.hometurf.mobileapp"
+    xmlns:tools="http://schemas.android.com/tools">
+{{#permissions}}
+    <uses-permission android:name="android.permission.{{.}}" />
+{{/permissions}}
+{{{customManifestBlock}}}
+    <application
+        android:usesCleartextTraffic="true"
+        android:allowBackup="false"
+        tools:replace="android:allowBackup"
+        android:icon="@mipmap/hometurf_ic_launcher"
+        android:label="{{{moduleName}}}"
+        android:roundIcon="@mipmap/hometurf_ic_launcher_round"
+        android:supportsRtl="true"
+        android:requestLegacyExternalStorage="true"
+        tools:ignore="GoogleAppIndexingWarning"
+        android:largeHeap="true">
+        <activity
+            android:name=".{{{moduleName}}}ReactNativeActivity"
+            android:label="{{{moduleName}}}"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        </activity>
+    </application>
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

@@ -1,0 +1,99 @@
+{
+  "project_info": {
+    "project_number": "296206855728",
+    "firebase_url": "https://hometurf-ci.firebaseio.com",
+    "project_id": "hometurf-ci",
+    "storage_bucket": "hometurf-ci.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:296206855728:android:939108b9d3acad5c7cc7f5",
+        "android_client_info": {
+          "package_name": "com.hometurf.mobileapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "296206855728-3pru5n4k4olvvdqig7mtitlr3vaduikn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1h4ppH6zjRTo6MD5-k1z6f9-yzYJwT4Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "296206855728-3pru5n4k4olvvdqig7mtitlr3vaduikn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "296206855728-6a7n8evhqlb7470c67girpieamnkr4f5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.cocoapods.demo.HomeTurfPod-Example"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:296206855728:android:b2d8d57c980d56c87cc7f5",
+        "android_client_info": {
+          "package_name": "com.hometurf.mobileapp.ci"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "296206855728-5gii5m6h5ndnnolg3ud8algvqeegoehb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hometurf.mobileapp.ci",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "296206855728-j09dbghau1u1nke0ijhm9dsmn5jmhrtq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hometurf.mobileapp.ci",
+            "certificate_hash": "1d863fef21991e8c9285948e9c5a6f7e6f4f388f"
+          }
+        },
+        {
+          "client_id": "296206855728-3pru5n4k4olvvdqig7mtitlr3vaduikn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1h4ppH6zjRTo6MD5-k1z6f9-yzYJwT4Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "296206855728-3pru5n4k4olvvdqig7mtitlr3vaduikn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "296206855728-6a7n8evhqlb7470c67girpieamnkr4f5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.cocoapods.demo.HomeTurfPod-Example"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
