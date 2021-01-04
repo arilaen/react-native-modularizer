@@ -34,7 +34,7 @@ We have also taken inspiration from [react-native-brownfield](https://github.com
 
 1. Add this line to your existing React Native app's package.json:
 ```.sh
-    "react-native-call-detection": "https://github.com/HomeTurf-LLC/react-native-modularizer.git",
+    "react-native-modularizer": "https://github.com/HomeTurf-LLC/react-native-modularizer.git",
 ```
 
 2. `npm i`
@@ -97,13 +97,13 @@ _TODO: Update/point to fork that uses up to date version >=1.3.0 of js-transform
 
 ### Android
 
-1. Run `npx react-native-modularizer android`
+1. Run `rnm android`
 
-2. Run `npm start`. In a separate terminal, checkout and pull your `ANDROID_TEST_REPO`, build and run, re-running step 1 to update JS bundle when changes are complete
+2. Run `npm start`. In a separate terminal, navigate to your `LOCAL_ANDROID_TEST_REPO`, build and run, re-running step 1 to update JS bundle when changes are complete
 
-3. Checkout and pull your `ANDROID_DEMO_REPO` and verify integration before sharing repos
+3. Navigate to your `LOCAL_ANDROID_DEMO_REPO` and verify integration before sharing repos
 
-### iOS
+### iOS (TBD)
 
 1. Run `npx react-native-modularizer ios`
 
@@ -114,7 +114,6 @@ _TODO: Update/point to fork that uses up to date version >=1.3.0 of js-transform
 ## Other possible topics
 
 - Firebase-specific integration (where to put assets)
-- Font integration (assets again)
 - Code push integration + testing
 - Setting environment variables (we use Firebase remote-config for most)
 - Linking custom libraries (i.e. iOS lib that usually requires manually linked framework)
