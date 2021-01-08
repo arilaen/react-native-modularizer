@@ -49,12 +49,12 @@ export async function buildAndroid(options) {
       versionName,
   } = androidProps;
     const {moduleRepo, testRepo, demoRepo} = androidProps.local;
-    console.log(chalk.blue(`Copying test repo templates to directory at ${chalk.green(testRepo)}...`));
-    await fs.remove(testRepo);
-    await fs.copy(ANDROID_TEST_TEMPLATE_DIR, testRepo);
-    console.log(chalk.blue(`Copying demo repo templates to directory at ${chalk.green(demoRepo)}...`));
-    await fs.remove(demoRepo);
-    await fs.copy(ANDROID_DEMO_TEMPLATE_DIR, demoRepo);
+    // console.log(chalk.blue(`Copying test repo templates to directory at ${chalk.green(testRepo)}...`));
+    // await fs.remove(testRepo);
+    // await fs.copy(ANDROID_TEST_TEMPLATE_DIR, testRepo);
+    // console.log(chalk.blue(`Copying demo repo templates to directory at ${chalk.green(demoRepo)}...`));
+    // await fs.remove(demoRepo);
+    // await fs.copy(ANDROID_DEMO_TEMPLATE_DIR, demoRepo);
     
     console.log(chalk.blue(`Copying android templates from ${chalk.yellow(ANDROID_MODULE_TEMPLATE_DIR)} to ${chalk.green(moduleRepo)}...`));
     await fs.remove(moduleRepo);
