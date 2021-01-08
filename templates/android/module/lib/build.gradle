@@ -1,21 +1,24 @@
 apply plugin: "com.android.library"
 apply plugin: "maven"
 apply plugin: "maven-publish"
-apply plugin: "com.mobbeel.plugin"
+// apply plugin: "com.kezong.fat-aar"
 {{#customPlugins}}
     apply plugin: "{{.}}"
 {{/customPlugins}}
 
+project.ext.react = [ enableVmCleanup: false ]
+
 android {
-    compileSdkVersion {{{compileSdkVersion}}}
-    buildToolsVersion "{{{buildToolsVersion}}}"
+    compileSdkVersion rootProject.ext.get('compileSdkVersion')
+    buildToolsVersion rootProject.ext.get('buildToolsVersion')
     {{extraAndroidContent}}
     defaultConfig {
-        minSdkVersion {{{minSdkVersion}}}
-        targetSdkVersion {{{targetSdkVersion}}}
+        minSdkVersion rootProject.ext.get('minSdkVersion')
+        targetSdkVersion rootProject.ext.get('targetSdkVersion')
         versionCode {{{versionCode}}}
         versionName "{{{versionName}}}"
         multiDexEnabled {{{multiDexEnabled}}}
+        {{{extraDefaultConfig}}}
     }
     buildTypes {
         {{{buildTypesBlock}}}
@@ -24,6 +27,7 @@ android {
         sourceCompatibility JavaVersion.{{{sourceCompatibility}}}
         targetCompatibility JavaVersion.{{{targetCompatibility}}}
     }
+    flavorDimensions "default"
     configurations.all {
         resolutionStrategy.force 'com.google.code.findbugs:jsr305:3.0.0'
     }
@@ -37,14 +41,17 @@ android {
 }
 
 dependencies {
+  implementation fileTree(dir: 'libs', include: '*.jar')
   api "com.facebook.react:react-native:{{{reactNativeVersion}}}"
-
-  def hermesPath = "{{{relativePathToNodeModules}}}/hermes-engine/android/";
-  debugImplementation files(hermesPath + "hermes-debug.aar")
-  releaseImplementation files(hermesPath + "hermes-release.aar")
+  implementation "org.webkit:android-jsc:+"
 {{#libDependencies}}
     {{{.}}}
 {{/libDependencies}}
+}
+
+task copyDownloadableDepsToLibs(type: Copy) {
+  from configurations.compile
+  into 'libs'
 }
 
 // fataar {
@@ -91,10 +98,6 @@ afterEvaluate {
  }
 }
 
-aarPlugin {
-    includeAllInnerDependencies true  // It's false for default
-}
-
 // apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
-// apply from: "../../node_modules/react-native/react.gradle"
-// apply from: "../../node_modules/react-native-code-push/android/codepush.gradle"
+apply from: "{{{relativePathFromLibToNodeModules}}}/react-native/react.gradle"
+apply from: "{{{relativePathFromLibToNodeModules}}}/react-native-code-push/android/codepush.gradle"

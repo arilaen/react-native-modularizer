@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
 import shell from 'shelljs';
+import Mustache from 'mustache';
 
 import { CONFIG_FILE_NAME, ANDROID_PACKAGE_SRC_PATH } from '../config';
 import {DEFAULT_ANDROID_PROJECT_GRADLE_DATA, DEFAULT_ANDROID_LIB_GRADLE_DATA,
@@ -33,11 +34,14 @@ export async function buildAndroid(options) {
       customBuildDependencies,
       customManifestBlock,
       customPlugins,
-      customRepos,
+      customMavenUrls,
       extraAndroidOptions,
+      extraDefaultConfig,
+      minSdkVersion,
       multiDexEnabled,
       permissions,
       resSrcDirs,
+      skippedNodeModules = [],
       sourceCompatibility,
       targetCompatibility,
       targetSdkVersion,
@@ -59,11 +63,17 @@ export async function buildAndroid(options) {
     shell.mv(`${process.cwd()}/${moduleRepo}/gitignore`, `${process.cwd()}/${moduleRepo}/.gitignore`);
     
     console.log(chalk.blue(`Updating library project-level build.gradle...`));
+    const relativePathFromProjectToNodeModules = path.relative(moduleRepo, `${process.cwd()}/node_modules`);
     const projectGradle = `${process.cwd()}/${moduleRepo}/build.gradle`;
     const projectGradleData = mergeInputsAndDefaults({
       androidGradlePlugin,
+      buildToolsVersion,
+      compileSdkVersion,
       customBuildDependencies,
-      customRepos,
+      customMavenUrls,
+      minSdkVersion,
+      relativePathFromProjectToNodeModules,
+      targetSdkVersion,
     }, DEFAULT_ANDROID_PROJECT_GRADLE_DATA);
     await mustacheRenderToOutputFileUsingTemplateFile(projectGradle, projectGradleData);
 
@@ -73,35 +83,37 @@ export async function buildAndroid(options) {
     const reactNativeVersion = dependencies['react-native'];
     if (!reactNativeVersion) throw new Error('react-native was not found in package.json !');
     // TODO: Check for minimum version (0.63)?
-    // const codePushVersion = dependencies['react-native-code-push'];
-    // if (codePushVersion) {
-    //   const codePushEnabled = true;
-    // }
+    const codePushVersion = dependencies['react-native-code-push'];
+    let includesCodePush = false;
+    if (codePushVersion) {
+      includesCodePush = true;
+    }
     console.log(chalk.blue(`Updating library lib-level build.gradle...`));
-    const {settings, libDependencies, imports, packageInstances} = await getDependencyConfig(moduleRepo);
+    const relativePathFromLibToNodeModules = path.relative(`${moduleRepo}/lib`, `${process.cwd()}/node_modules`);
+    const {settings, libDependencies, imports, packageInstances} = await getDependencyConfig(moduleRepo, skippedNodeModules);
 
     const settingsGradleData = mergeInputsAndDefaults({
       settings
     }, DEFAUlT_ANDROID_SETTINGS_GRADLE_DATA);
     const settingsGradle = `${moduleRepo}/settings.gradle`;
     await mustacheRenderToOutputFileUsingTemplateFile(settingsGradle, settingsGradleData);
-    const relativePathToNodeModules = path.relative(`${moduleRepo}/lib`, `${process.cwd()}/node_modules`);
     const libGradleData = mergeInputsAndDefaults({
-      buildToolsVersion,
-      compileSdkVersion,
       customPlugins,
       extraAndroidOptions,
+      extraDefaultConfig,
       libDependencies,
       multiDexEnabled,
       reactNativeVersion,
-      relativePathToNodeModules,
+      relativePathFromLibToNodeModules,
       resSrcDirs,
       sourceCompatibility,
       targetCompatibility,
-      targetSdkVersion,
       versionCode,
       versionName,
-    }, DEFAULT_ANDROID_LIB_GRADLE_DATA);
+    }, {
+      ...DEFAULT_ANDROID_LIB_GRADLE_DATA,
+      buildTypesBlock: Mustache.render(DEFAULT_ANDROID_LIB_GRADLE_DATA.buildTypesBlock, {moduleName})
+    });
     const libGradle = `${moduleRepo}/lib/build.gradle`;
     await mustacheRenderToOutputFileUsingTemplateFile(libGradle, libGradleData);
     
@@ -120,6 +132,7 @@ export async function buildAndroid(options) {
     shell.mv(`${activityPathPrefix}/HomeTurfActivity.java`,
     `${activityPathPrefix}/${activityName}.java`);
     const activityData = mergeInputsAndDefaults({
+      includesCodePush,
       moduleName,
       imports,
       packageInstances,
@@ -131,7 +144,12 @@ export async function buildAndroid(options) {
     // colors/themes?
     // fonts???
     console.log(chalk.blue('Building JS bundle...'));
-    await exec(`npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output ${moduleRepo}/lib/src/main/res/hometurf.jsbundle --assets-dest ${moduleRepo}/lib/src/main/res --sourcemap-output ${moduleRepo}/lib/src/main/res/raw/hometurfsourcemap.js`);
+    await exec(`npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output ${moduleRepo}/lib/src/main/res/raw/hometurf.jsbundle --assets-dest ${moduleRepo}/lib/src/main/res --sourcemap-output ${moduleRepo}/lib/src/main/res/raw/hometurfsourcemap.js`);
+
+    // console.log(chalk.blue('Setting up gradle wrapper...'));
+    // await exec(`gradle wrapper`, {cwd: moduleRepo});
+    // console.log(chalk.blue('Syncing gradle files and building project...'));
+    // await exec(`./gradlew build`, {cwd: moduleRepo});
 
   } catch (error) {
     console.log(chalk.blue('Could not build android'));
@@ -140,7 +158,7 @@ export async function buildAndroid(options) {
   }
 }
 
-const getDependencyConfig = async (moduleRepo) => {
+const getDependencyConfig = async (moduleRepo, skippedNodeModules) => {
   console.log(chalk.blue('Resolving dependency configurations'));
   const libDependencies = [];
   const imports = [];
@@ -160,18 +178,30 @@ const getDependencyConfig = async (moduleRepo) => {
     };
     console.log(chalk.green(`> ${name}`));
     const {folder, packageImportPath, packageInstance, sourceDir} = androidConfig;
-    const {version} = await fs.readJSON(`${folder}/package.json`);
+    // const {version} = await fs.readJSON(`${folder}/package.json`);
     // const fullPackageName = packageImportPath.replace('import ', '').replace(';', '');
-    const relativeSourceDir = path.relative(`${moduleRepo}/lib`, sourceDir);
-    const gradleProjectName = name.replace('@', '').replace('/', '_');
-    settings.push(`include '${gradleProjectName}'
-    project(':${gradleProjectName}').projectDir = file('./${relativeSourceDir}')`);
-    libDependencies.push(`api project('path: :${gradleProjectName}', configuration: 'default')`);
-    if (name !== 'react-native-code-push') { //already set
+    const relativeToSettingsSourceDir = path.relative(moduleRepo, sourceDir);
+    const gradleProjectName = name.replace('/', '_');
+    if (skippedNodeModules.some(m => m === name)) {
+      console.log(chalk.red(`Skipping ${name}...`));
+      continue;
+    } else if (name === 'react-native-code-push') {
+      // Skip imports + packageInstances and just add settings (with modified path) + modify gradle file
+      // Codepush requires /app at the end of the path that react native config gives...
+      libDependencies.push(`api project(':${gradleProjectName}')`);
+      settings.push(`
+include ':${gradleProjectName}'
+project(':${gradleProjectName}').projectDir = new File(rootProject.projectDir, '${relativeToSettingsSourceDir}/app')`);
+      // Make CodePush library compatible
+      await exec(`sed -i -E 's/applicationVariants/libraryVariants/g' ./node_modules/react-native-code-push/android/codepush.gradle`, {cwd: process.cwd()});
+    } else {
+      libDependencies.push(`api project(':${gradleProjectName}')`);
+      settings.push(`
+include ':${gradleProjectName}'
+project(':${gradleProjectName}').projectDir = new File(rootProject.projectDir, '${relativeToSettingsSourceDir}')`);
       imports.push(packageImportPath);
       packageInstances.push(packageInstance);
     }
-
     if (Object.keys(nativeConfig.assets).length) {
       console.log(chalk.red({assets: nativeConfig.assets}));
     }

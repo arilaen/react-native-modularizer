@@ -4,16 +4,16 @@ import android.app.Activity;
 import android.os.Bundle;
 
 import com.facebook.react.BuildConfig;
-import com.facebook.react.PackageList;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactInstanceManagerBuilder;
-import com.facebook.react.ReactPackage;
 import com.facebook.react.ReactRootView;
 import com.facebook.react.common.LifecycleState;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
 import com.facebook.soloader.SoLoader;
 import com.instabug.reactlibrary.RNInstabugReactnativePackage;
+{{#includesCodePush}}
 import com.microsoft.codepush.react.CodePush;
+{{/includesCodePush}}
 import java.util.List;
 {{#imports}}
     {{{.}}}
@@ -56,6 +56,10 @@ public class {{{moduleName}}}ReactNativeActivity extends Activity implements Def
 {{#packageInstances}}
     builder.addPackage({{.}});
 {{/packageInstances}}
+{{#includesCodePush}}
+    String {{moduleName}}CodePushDeploymentKey = getResources().getString(R.string.{{moduleName}}CodePushDeploymentKey);
+    builder.addPackage(new CodePush({{moduleName}}CodePushDeploymentKey, getApplicationContext(), BuildConfig.DEBUG));
+{{/includesCodePush}}
       if (com.hometurf.mobileapp.BuildConfig.BUILD_TYPE.contentEquals("debug")) {
 
         return builder
@@ -63,14 +67,17 @@ public class {{{moduleName}}}ReactNativeActivity extends Activity implements Def
           .build();
       } else if (com.hometurf.mobileapp.BuildConfig.BUILD_TYPE.contentEquals("staging")) {
         return builder
-          .setJSBundleFile('res/raw/hometurf.jsbundle') // Use bundled file
+          .setJSBundleFile("res/raw/hometurf.jsbundle") // Use bundled file
           .build();
       } else {
         // release
-        String {{moduleName}}CodePushDeploymentKey = getResources().getString(R.string.{{moduleName}}CodePushDeploymentKey);
         return builder
-          .addPackage(new CodePush({{moduleName}}CodePushDeploymentKey, getApplicationContext(), BuildConfig.DEBUG))
+{{#includesCodePush}}
           .setJSBundleFile(CodePush.getJSBundleFile())
+{{/includesCodePush}}
+{{^includesCodePush}}
+          .setJSBundleFile("res/raw/hometurf.jsbundle") 
+{{/includesCodePush}}
           // Get the JS Bundle File via Code Push
           .build();
       }

@@ -8,11 +8,7 @@
 {{{customManifestBlock}}}
     <application
         android:usesCleartextTraffic="true"
-        android:allowBackup="false"
-        tools:replace="android:allowBackup"
-        android:icon="@mipmap/hometurf_ic_launcher"
         android:label="{{{moduleName}}}"
-        android:roundIcon="@mipmap/hometurf_ic_launcher_round"
         android:supportsRtl="true"
         android:requestLegacyExternalStorage="true"
         tools:ignore="GoogleAppIndexingWarning"
@@ -23,5 +19,4 @@
             android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         </activity>
     </application>
-    <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
