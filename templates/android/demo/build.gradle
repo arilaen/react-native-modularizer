@@ -1,0 +1,52 @@
+buildscript {
+    ext {
+        buildToolsVersion = "{{{buildToolsVersion}}}"
+        minSdkVersion = {{{minSdkVersion}}}
+        compileSdkVersion = {{{compileSdkVersion}}}
+        targetSdkVersion = {{targetSdkVersion}}
+    }
+    repositories {
+        google()
+        jcenter()
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:{{{androidGradlePlugin}}}'
+        classpath 'com.google.gms:google-services:4.3.4'
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.4.1'
+{{#customBuildDependencies}}
+    classpath '{{.}}'
+{{/customBuildDependencies}}
+    }
+}
+
+allprojects {
+    repositories {
+        maven {
+            // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+            url("$rootDir/{{{relativePathFromProjectToNodeModules}}}/react-native/android")
+
+        }
+        maven {
+            // Android JSC is installed from npm
+            url("$rootDir/{{{relativePathFromProjectToNodeModules}}}/node_modules/jsc-android/dist")
+        }
+{{#customMavenUrls}}
+        maven {
+          url "{{{.}}}"
+        }
+{{/customMavenUrls}}
+        google()
+        jcenter()
+        maven { url 'https://www.jitpack.io' }
+    }
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << '-Xlint:none'
+        options.compilerArgs << '-nowarn'
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

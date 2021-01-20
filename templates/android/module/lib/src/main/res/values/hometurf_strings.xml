@@ -1,5 +1,0 @@
-<resources>
-    <string name="app_name">HomeTurfAndroidLibrary</string>
-    <string name="facebook_app_id">736382600142163</string>
-    <string name="CodePushDeploymentKey" moduleConfig="true" translatable="false">@string/{{{moduleName}}}CodePushAndroid</string>
-</resources>

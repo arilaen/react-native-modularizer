@@ -1,0 +1,6 @@
+rootProject.name = "DemoConsumerApp"
+include ':app', ':lib'
+
+{{#settings}}
+{{{.}}}
+{{/settings}}

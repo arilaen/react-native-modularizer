@@ -1,12 +1,11 @@
 apply plugin: "com.android.library"
 apply plugin: "maven"
 apply plugin: "maven-publish"
-// apply plugin: "com.kezong.fat-aar"
 {{#customPlugins}}
-    apply plugin: "{{.}}"
+apply plugin: "{{.}}"
 {{/customPlugins}}
 
-project.ext.react = [ enableVmCleanup: false ]
+project.ext.react = [ enableVmCleanup: false, enableHermes: true, bundleInDebug: true ]
 
 android {
     compileSdkVersion rootProject.ext.get('compileSdkVersion')
@@ -42,10 +41,9 @@ android {
 
 dependencies {
   implementation fileTree(dir: 'libs', include: '*.jar')
-  api "com.facebook.react:react-native:{{{reactNativeVersion}}}"
-  implementation "org.webkit:android-jsc:+"
+  implementation "com.facebook.react:react-native:{{{reactNativeVersion}}}"
 {{#libDependencies}}
-    {{{.}}}
+  implementation {{{.}}}
 {{/libDependencies}}
 }
 
@@ -53,16 +51,6 @@ task copyDownloadableDepsToLibs(type: Copy) {
   from configurations.compile
   into 'libs'
 }
-
-// fataar {
-//     /**
-//      * If transitive is true, local jar module and remote library's dependencies will be embed. (local aar module does not support)
-//      * If transitive is false, just embed first level dependency
-//      * Default value is false
-//      * @since 1.3.0
-//      */
-//     transitive = true
-// }
 
 afterEvaluate {
  publishing {
@@ -97,7 +85,3 @@ afterEvaluate {
    }
  }
 }
-
-// apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
-apply from: "{{{relativePathFromLibToNodeModules}}}/react-native/react.gradle"
-apply from: "{{{relativePathFromLibToNodeModules}}}/react-native-code-push/android/codepush.gradle"

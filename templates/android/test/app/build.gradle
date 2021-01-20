@@ -1,0 +1,57 @@
+apply plugin: "com.android.application"
+
+project.ext.react = [ enableHermes: true, bundleInDebug: false ]
+
+android {
+    compileSdkVersion rootProject.ext.get('compileSdkVersion')
+    buildToolsVersion rootProject.ext.get('buildToolsVersion')
+    {{extraAndroidContent}}
+    defaultConfig {
+        minSdkVersion rootProject.ext.get('minSdkVersion')
+        targetSdkVersion rootProject.ext.get('targetSdkVersion')
+        versionCode {{{versionCode}}}
+        versionName "{{{versionName}}}"
+        multiDexEnabled true
+        {{{extraDefaultConfig}}}
+    }
+    buildTypes {
+        {{{buildTypesBlock}}}
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.{{{sourceCompatibility}}}
+        targetCompatibility JavaVersion.{{{targetCompatibility}}}
+    }
+    lintOptions {
+        abortOnError false
+    }
+    {{{extraAndroidContent}}}
+}
+
+dependencies {
+  implementation fileTree(dir: 'libs', include: '*.jar')
+  implementation "com.facebook.react:react-native:{{{reactNativeVersion}}}"
+  implementation 'com.facebook.soloader:soloader:0.9.0'
+  implementation 'com.google.firebase:firebase-bom:26.3.0'
+  implementation 'com.google.firebase:firebase-analytics:18.0.1'
+{{#libDependencies}}
+  implementation {{{.}}}
+{{/libDependencies}}
+  def hermesPath = "{{{relativePathFromLibToNodeModules}}}/node_modules/hermes-engine/android/";
+  debugImplementation files(hermesPath + "hermes-debug.aar")
+  releaseImplementation files(hermesPath + "hermes-release.aar")
+  // debugImplementation "com.hometurf.mobileapp:final-debug:1.0@aar"
+  // releaseImplementation "com.hometurf.mobileapp:final-release:1.0@aar"
+}
+
+task copyDownloadableDepsToLibs(type: Copy) {
+    from configurations.compile
+    into 'libs'
+}
+
+apply from: "{{{relativePathFromLibToNodeModules}}}/react-native/react.gradle"
+apply from: "{{{relativePathFromLibToNodeModules}}}/react-native-code-push/android/codepush.gradle"
+
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.firebase.crashlytics'
+
+googleServices { disableVersionCheck = true }
