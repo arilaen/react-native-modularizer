@@ -1,0 +1,93 @@
+apply plugin: "com.android.library"
+apply plugin: "maven"
+// apply plugin: "maven-publish"
+
+project.ext.react = [
+  enableVmCleanup: false, // This option will not work for library projects
+  enableHermes: true,
+  bundleInDebug: true,
+  nodeModulesPath: '.',
+]
+
+android {
+    compileSdkVersion rootProject.ext.get('compileSdkVersion')
+    buildToolsVersion rootProject.ext.get('buildToolsVersion')
+  {{extraAndroidContent}}
+    defaultConfig {
+        minSdkVersion rootProject.ext.get('minSdkVersion')
+        targetSdkVersion rootProject.ext.get('targetSdkVersion')
+        versionCode {{{versionCode}}}
+        versionName "{{{versionName}}}"
+        multiDexEnabled {{{multiDexEnabled}}}
+        {{{extraDefaultConfig}}}
+    }
+    buildTypes {
+        {{{buildTypesBlock}}}
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.{{{sourceCompatibility}}}
+        targetCompatibility JavaVersion.{{{targetCompatibility}}}
+    }
+    flavorDimensions "default"
+    configurations.all {
+        resolutionStrategy.force 'com.google.code.findbugs:jsr305:3.0.0'
+    }
+    sourceSets.main {
+        res.srcDirs = [ {{{resSrcDirs}}} ]
+    }
+    lintOptions {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+    {{{extraAndroidContent}}}
+}
+
+dependencies {
+  api fileTree(dir: 'libs', include: '*.jar')
+  api "com.facebook.react:react-native:{{{reactNativeVersion}}}"
+{{#libDependencies}}
+  api {{{.}}}
+{{/libDependencies}}
+{{#extraLibDependencies}}
+  api "{{{.}}}"
+{{/extraLibDependencies}}
+}
+
+task copyDownloadableDepsToLibs(type: Copy) {
+  from configurations.compile
+  into 'libs'
+}
+
+// afterEvaluate {
+//  publishing {
+//    publications {
+//      // Creates a Maven publication called “debug”.
+//      debug(MavenPublication) {
+//        // Applies the component for the debug build variant.
+//        from components.debug
+
+//        groupId = '{{{groupId}}}'
+//        artifactId = 'final-debug'
+//        version = {{{versionName}}}
+//      }
+//      staging(MavenPublication) {
+//        // Applies the component for the release build variant.
+//        from components.staging
+
+//        // You can then customize attributes of the publication as shown below.
+//        groupId = '{{{groupId}}}'
+//        artifactId = 'final-staging'
+//        version = {{{versionName}}}
+//      }
+//      release(MavenPublication) {
+//        // Applies the component for the release build variant.
+//        from components.release
+
+//        // You can then customize attributes of the publication as shown below.
+//        groupId = '{{{groupId}}}'
+//        artifactId = 'final-release'
+//        version = {{{versionName}}}
+//      }
+//    }
+//  }
+// }

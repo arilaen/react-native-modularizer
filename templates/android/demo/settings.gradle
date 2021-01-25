@@ -1,6 +1,8 @@
 rootProject.name = "DemoConsumerApp"
-include ':app', ':lib'
+include ':app'
 
+include ':{{{moduleName}}}'
+project(':{{{moduleName}}}').projectDir = new File(rootProject.projectDir, './{{{moduleName}}}')
 {{#settings}}
 {{{.}}}
 {{/settings}}

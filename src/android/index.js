@@ -1,48 +1,43 @@
-import chalk from 'chalk';
 import fs from 'fs-extra';
-import path from 'path';
-import shell from 'shelljs';
-import Mustache from 'mustache';
-import replace from 'replace-in-file';
+import Steps from './steps';
+import checkNativeModulesUpToDate from '../utils/checkNativeModulesUpToDate';
+import ensureFoldersExist from '../utils/ensureFoldersExist';
+import {log, logError} from '../utils/logHelpers';
+import getDependencyConfig from './androidUtils/getDependencyConfig';
+import loadDependencyNamesAndVersionsFromPackageJSON from './androidUtils/loadDependencyNamesAndVersionsFromPackageJSON';
+import checkRNMConfigUpToDate from '../utils/checkRNMConfigUpToDate';
+import { CONFIG_FILE_NAME } from '../config';
 
-import { CONFIG_FILE_NAME, ANDROID_PACKAGE_SRC_PATH } from '../config';
-import {DEFAULT_ANDROID_PROJECT_GRADLE_DATA, DEFAULT_ANDROID_LIB_GRADLE_DATA,
-  DEFAULT_ANDROID_MANIFEST_DATA, DEFAULT_ACTIVITY_DATA,
-  DEFAUlT_ANDROID_SETTINGS_GRADLE_DATA } from './defaults';
-import exec from '../utils/exec';
-import {mustacheRenderToOutputFileUsingTemplateFile} from '../utils/mustache';
-import { mergeInputsAndDefaults } from '../utils/object';
+const FORCE_UPDATE_TEMPLATES = true;
+const SKIP_JS_BUNDLE = true;
 
-const ANDROID_TEMPLATE_ROOT = `${__dirname}/../../templates/android`
-const ANDROID_MODULE_TEMPLATE_DIR = `${ANDROID_TEMPLATE_ROOT}/module`;
-const ANDROID_TEST_TEMPLATE_DIR = `${ANDROID_TEMPLATE_ROOT}/test`;
-const ANDROID_DEMO_TEMPLATE_DIR = `${ANDROID_TEMPLATE_ROOT}/demo`;
-
-const clog = arg => console.log(chalk.blue(arg));
-
-export async function buildAndroid(_options) {
+export async function buildAndroid(options) {
   try {
-    // Fetch config info
-    const properties = await fs.readJSON(CONFIG_FILE_NAME);
-    if (!properties.enabledNativePlatforms.some(p => p.toLowerCase() === 'android')) {
-      throw new Error(`Android is not enabled in ${CONFIG_FILE_NAME}`)
-    }
-    // Create android project and copy over dependencies
-    // Create local, demo and test directories if they do not exist
-    const {moduleName, moduleVersion, android: androidProps} = properties;
+    // Fetch configuration information from .rnmrc.json at react native project level root
+    const {android: androidProps, moduleVersion} = await fs.readJSON(`./${CONFIG_FILE_NAME}`);
     const {
+      moduleName,
+      groupId,
+      additionalActivityImports,
       androidGradlePlugin,
+      beforeOnCreate,
       buildToolsVersion,
       compileSdkVersion,
       customBuildDependencies,
       customManifestBlock,
+      customApplicationManifestBlock,
       customPlugins,
       customMavenUrls,
       extraAndroidOptions,
       extraDefaultConfig,
+      extraLibDependencies,
+      jsBundleFilePathStaging,
+      jsBundleFilePathRelease,
+      manualPackages,
       minSdkVersion,
       multiDexEnabled,
       permissions,
+      reactAppName,
       resSrcDirs,
       skippedNodeModules = [],
       sourceCompatibility,
@@ -50,218 +45,197 @@ export async function buildAndroid(_options) {
       targetSdkVersion,
       versionCode,
       versionName,
-  } = androidProps;
-    const {moduleRepo, testRepo, demoRepo} = androidProps.local;
-    clog(`Copying test repo templates to directory at ${chalk.green(testRepo)}...`);
-    // await fs.remove(testRepo);
-    await fs.copy(ANDROID_TEST_TEMPLATE_DIR, testRepo);
-    clog(`Copying demo repo templates to directory at ${chalk.green(demoRepo)}...`);
-    // await fs.remove(demoRepo);
-    await fs.copy(ANDROID_DEMO_TEMPLATE_DIR, demoRepo);
+    } = androidProps;
+    // Set locations of test and demo projects to be created/updated
+    const {testRepo, demoRepo} = androidProps.local;
+    // Set path of module to be created/updated in test project
+    const modulePath = `${testRepo}/${moduleName}`;
     
-    clog(`Copying android templates from ${chalk.yellow(ANDROID_MODULE_TEMPLATE_DIR)} to ${chalk.green(moduleRepo)}...`);
-    // await fs.remove(moduleRepo);
-    await fs.copy(ANDROID_MODULE_TEMPLATE_DIR, moduleRepo);
-    
-    const relativePathFromProjectToNodeModules = `./${moduleName}/node_modules`;
+    // Find native dependencies for checking current installed deps and updating if needed,
+    // and related data (package imports, etc.) for populating templates if not up to date
     const {
       nativeDependencyNames,
-      moduleSettings,
-      demoSettings,
-      testSettings,
+      settings,
       libDependencies,
       imports,
-      packageInstances
-    } = await getDependencyConfig(moduleName, moduleRepo, demoRepo, testRepo, skippedNodeModules);
+      packageInstances,
+      manualImports,
+      manualPackageInstances
+    } = await getDependencyConfig({moduleName, skippedNodeModules, manualPackages});
 
-    clog(`Loading dependency names and versions from package.json...`);
-  
-    const {dependencies} = await fs.readJSON('./package.json');
-    const reactNativeVersion = dependencies['react-native'];
-    if (!reactNativeVersion) throw new Error('react-native was not found in package.json !');
-    // TODO: Check for minimum version (0.63)?
-    const codePushVersion = dependencies['react-native-code-push'];
-    let includesCodePush = false;
-    if (codePushVersion) {
-      includesCodePush = true;
-    }
-    clog(`Copying over package.json (native deps only)`);
-    const moduleJSON = {
-      name: moduleName,
-      version: moduleVersion,
-      private: true,
-      dependencies: nativeDependencyNames.reduce((result, name) => {
-        result[name] = dependencies[name];
-        return result;
-      }, {
-        'react-native': reactNativeVersion
-      })
-    };
-    await fs.writeJSON(`${moduleRepo}/package.json`, moduleJSON, {spaces: 2, EOL: '\n'});
-    clog(`Installing native node modules to android module directory`);
-    await exec('npm i', {cwd: moduleRepo, shell: true});
-    clog('Fixing react.gradle paths to react project + node_modules');
-    await replace({
-      files: `${moduleRepo}/node_modules/react-native/react.gradle`,
-      from: /..\/../g,
-      to: '..'
+    // Determine whether this is the first time the project has been set up
+    // const notInitialRun = await checkPathsExist(
+    //   `${modulePath}/used-android.${CONFIG_FILE_NAME}`,
+    //   `${demoRepo}/${moduleName}/build.gradle`
+    // );
+
+    // Create local test, modulePath and demo repo folders if they don't already exist
+    await ensureFoldersExist(testRepo, modulePath, demoRepo);
+
+    // Find all RN deps (including ones that do not have native modules) and RN version (i.e. 0.63.4)
+    const {
+      dependencies: allReactNativeProjectDependencies,
+      reactNativeVersion
+    } = await loadDependencyNamesAndVersionsFromPackageJSON({dir: '.'});
+    const needToInstallNativeNodeModulesWithFixes = await getNeedToInstallNativeNodeModulesWithFixes({
+      options,
+      modulePath,
+      allReactNativeProjectDependencies,
+      nativeDependencyNames
     });
 
-    clog(`Updating AndroidManifest.xml...`);
-    const manifestData = mergeInputsAndDefaults({
-      customManifestBlock,
-      moduleName,
-      permissions
-    }, DEFAULT_ANDROID_MANIFEST_DATA);
-    const manifest = `${moduleRepo}/lib/src/main/AndroidManifest.xml`;
-    await mustacheRenderToOutputFileUsingTemplateFile(manifest, manifestData);
+    // Create/update package.json and node_modules in module if needed
+    if (needToInstallNativeNodeModulesWithFixes) {
+      await Steps.installNativeNodeModulesWithFixes({
+        modulePath, moduleName, moduleVersion, nativeDependencyNames, reactNativeVersion, allReactNativeProjectDependencies
+      });
+    }
 
-    clog(`Updating activity...`);
-    const activityName = `${moduleName}ReactNativeActivity`;
-    const activityPathPrefix = `${moduleRepo}/lib/src/main/java/${ANDROID_PACKAGE_SRC_PATH}`;
-    shell.mv(`${activityPathPrefix}/HomeTurfActivity.java`,
-    `${activityPathPrefix}/${activityName}.java`);
-    const activityData = mergeInputsAndDefaults({
-      includesCodePush,
-      moduleName,
-      imports,
-      packageInstances,
-    }, DEFAULT_ACTIVITY_DATA);
-    await mustacheRenderToOutputFileUsingTemplateFile(`${activityPathPrefix}/${activityName}.java`, activityData);
-
-    for (const repo of [moduleRepo, testRepo, demoRepo]) {
-      // https://github.com/npm/npm/issues/1862 npm renames .gitignore to .npmignore causing the generated container to emit the .gitignore file. This solution below helps to bypass it.
-      shell.mv(`${process.cwd()}/${repo}/gitignore`, `${process.cwd()}/${repo}/.gitignore`);
-
-      const repoProjectPath = repo === moduleRepo ? `${repo}/lib` : `${repo}/app`;
-
-      clog(`Updating library project-level build.gradle...`);
-      const projectGradle = `${process.cwd()}/${repo}/build.gradle`;
-      const projectGradleData = mergeInputsAndDefaults({
+    const needToUpdateTemplates = await getNeedToUpdateTemplates({
+      needToInstallNativeNodeModulesWithFixes,
+      options,
+      modulePath
+    });
+    
+    // Copy and populate templates if needed (initial load, dependency update, rnmrc.js update or CLI flag)
+    if (needToUpdateTemplates) {
+      await Steps.copyTemplates({demoRepo, testRepo, moduleName});
+      await Steps.updateModuleAndroidManifestFromTemplate({
+        modulePath,
+        moduleName,
+        customManifestBlock,
+        customApplicationManifestBlock,
+        permissions,
+        groupId
+      });
+      await Steps.updateReactNativeActivityFromTemplate({
+        modulePath,
+        moduleName,
+        imports,
+        manualImports,
+        additionalActivityImports,
+        packageInstances,
+        manualPackageInstances,
+        jsBundleFilePathStaging,
+        jsBundleFilePathRelease,
+        reactAppName,
+        groupId,
+        beforeOnCreate
+      });
+      await Steps.updateAppActivitiesFromTemplates({
+        demoRepo,
+        testRepo,
+        moduleName,
+        imports,
+        manualImports,
+        packageInstances,
+        manualPackageInstances,
+        jsBundleFilePathStaging,
+        jsBundleFilePathRelease,
+        reactAppName,
+        groupId
+      });
+      await Steps.updateProjectSettingsFilesFromTemplates({
+        repos: [testRepo, demoRepo],
+        moduleName,
+        settings
+      });
+      await Steps.updateProjectBuildGradleFilesFromTemplates({
+        repos: [testRepo, demoRepo],
+        moduleName,
         androidGradlePlugin,
         buildToolsVersion,
         compileSdkVersion,
         customBuildDependencies,
         customMavenUrls,
         minSdkVersion,
-        relativePathFromProjectToNodeModules,
         targetSdkVersion,
-      }, DEFAULT_ANDROID_PROJECT_GRADLE_DATA);
-      await mustacheRenderToOutputFileUsingTemplateFile(projectGradle, projectGradleData);
-  
-      clog(`Updating library lib-level build.gradle...`);
-      const relativePathFromLibToNodeModules = '../${moduleName}/node_modules';
-      const settings = repo === moduleRepo ? moduleSettings :
-                        repo === demoRepo ? demoSettings :
-                        testSettings;
-      const settingsGradleData = mergeInputsAndDefaults({
-        settings
-      }, DEFAUlT_ANDROID_SETTINGS_GRADLE_DATA);
-      const settingsGradle = `${repo}/settings.gradle`;
-      await mustacheRenderToOutputFileUsingTemplateFile(settingsGradle, settingsGradleData);
-      const libGradleData = mergeInputsAndDefaults({
+      });
+      await Steps.updateAppBuildGradleFilesFromTemplates({
+        repos: [testRepo, demoRepo],
+        moduleName,
         customPlugins,
         extraAndroidOptions,
         extraDefaultConfig,
+        extraLibDependencies,
         libDependencies,
         multiDexEnabled,
         reactNativeVersion,
-        relativePathFromLibToNodeModules,
         resSrcDirs,
         sourceCompatibility,
         targetCompatibility,
         versionCode,
         versionName,
-      }, {
-        ...DEFAULT_ANDROID_LIB_GRADLE_DATA,
-        buildTypesBlock: Mustache.render(DEFAULT_ANDROID_LIB_GRADLE_DATA.buildTypesBlock, {moduleName})
+        groupId
       });
-      const libGradle = `${repoProjectPath}/build.gradle`;
-      await mustacheRenderToOutputFileUsingTemplateFile(libGradle, libGradleData);
+      await Steps.updateModuleBuildGradleFileFromTemplate({
+        modulePath,
+        moduleName,
+        customPlugins,
+        extraAndroidOptions,
+        extraDefaultConfig,
+        extraLibDependencies,
+        libDependencies,
+        multiDexEnabled,
+        reactNativeVersion,
+        resSrcDirs,
+        sourceCompatibility,
+        targetCompatibility,
+        versionCode,
+        versionName,
+        groupId
+      });
+    } else {
+      log('Skipping templating...');
     }
-  
-    // Create res files with prefixes for:
-    // strings
-    // possible firebase configs (google-services.json for each scheme)
-    // colors/themes?
-    clog('Building JS bundle...');
-    fs.ensureDir(`${moduleRepo}/lib/src/main/assets`);
-    await exec(`npx react-native bundle --platform android --dev false --entry-file app/index.js --bundle-output ${moduleRepo}/lib/src/main/assets/hometurf.jsbundle --assets-dest ${moduleRepo}/lib/src/main/assets --sourcemap-output ${moduleRepo}/lib/src/main/assets/hometurfsourcemap.js`);
-
-    clog('Copying google-services.json files...');
-    await fs.copy('./rnmconfig/test/google-services-debug.json', `${testRepo}/app/src/debug/google-services.json`);
-    await fs.copy('./rnmconfig/test/google-services-release.json', `${testRepo}/app/src/release/google-services.json`);
-    await fs.copy('./rnmconfig/demo/google-services-debug.json', `${demoRepo}/app/src/debug/google-services.json`);
-    await fs.copy('./rnmconfig/demo/google-services-release.json', `${demoRepo}/app/src/release/google-services.json`);
-
-
-    clog('Copying fonts...');
-    await fs.copy('./app/assets/fonts', `${moduleRepo}/app/src/main/res/`);
-    await fs.copy('./app/assets/fonts', `${moduleRepo}/app/src/debug/res/`);
-    await fs.copy('./app/assets/fonts', `${moduleRepo}/app/src/release/res/`);
-
+    await Steps.copySupplementalProjectFiles({demoRepo, testRepo});
+    if (!SKIP_JS_BUNDLE && !options.skipJSBundle) {
+      await Steps.buildJSBundle(modulePath);
+    }
+    await Steps.testBuild({moduleName, testRepo});
+    // await Steps.copyModuleToDemo({moduleName, modulePath, demoRepo});
+    // await Steps.publishModuleExportRepo(moduleExportRepo, androidProps.remote.moduleRepo);
   } catch (error) {
-    clog('Could not build android');
-    console.log(chalk.red(error));
+    logError('Could not build android');
+    logError(error);
     process.exit(1);
   }
 }
 
-const getDependencyConfig = async (moduleName, moduleRepo, demoRepo, testRepo, skippedNodeModules) => {
-  clog('Resolving dependency configurations');
-  const libDependencies = [];
-  const imports = [];
-  const packageInstances = [];
-  const moduleSettings = [];
-  const demoSettings = [];
-  const testSettings = [];
-  const nativeDependencyNames = [];
-  const appSuffixIfCodePush = (name) => {
-    if (name === 'react-native-code-push') return '/app';
-    return '';
-  }
-  const {stdout, stderr: error} = await exec(`npx react-native config`, {cwd: process.cwd()});
-  if (error) throw new Error(error);
-  const result = JSON.parse(stdout.toString());
-  const {dependencies} = result;
-  for (const [name, nativeConfig] of Object.entries(dependencies)) {
-    if (!nativeConfig) {
-      continue;
-    }
-    const androidConfig = nativeConfig.platforms.android;
-    if (!androidConfig) {
-      continue;
-    };
-    nativeDependencyNames.push(name);
-    clog(chalk.green(`> ${name}`));
-    const {folder, packageImportPath, packageInstance} = androidConfig;
-    const moduleSourceDirFromReactNativeSourceDir = `./${moduleName}/node_modules/${folder}`;
-    const relativeToModuleSettingsSourceDir = path.relative(moduleRepo, moduleSourceDirFromReactNativeSourceDir);
-    const relativeToDemoSettingsSourceDir = path.relative(demoRepo, moduleSourceDirFromReactNativeSourceDir);
-    const relativeToTestSettingsSourceDir = path.relative(testRepo, moduleSourceDirFromReactNativeSourceDir);
-    const gradleProjectName = name.replace('/', '_');
-    if (skippedNodeModules.some(m => m === name)) {
-      clog(chalk.red(`Skipping ${name}...`));
-      continue;
-    } else {
-      libDependencies.push(`project(':${gradleProjectName}')`);
-      moduleSettings.push(
-        `project(':${gradleProjectName}').projectDir = new File(rootProject.projectDir, '${relativeToModuleSettingsSourceDir}${appSuffixIfCodePush(name)}')`);
-      demoSettings.push(
-        `project(':${gradleProjectName}').projectDir = new File(rootProject.projectDir, '${relativeToDemoSettingsSourceDir}${appSuffixIfCodePush(name)}')`);
-      testSettings.push(
-        `project(':${gradleProjectName}').projectDir = new File(rootProject.projectDir, '${relativeToTestSettingsSourceDir}${appSuffixIfCodePush(name)}')`);
-    }
-    imports.push(packageImportPath);
-    packageInstances.push(packageInstance);
-  }
-  return {
-    nativeDependencyNames,
-    moduleSettings,
-    demoSettings,
-    testSettings,
-    libDependencies,
-    imports,
-    packageInstances
-  };
+/**
+ * 
+ * Helper methods
+ * 
+ * */
+
+const getNeedToInstallNativeNodeModulesWithFixes = async ({
+  options,
+  modulePath,
+  allReactNativeProjectDependencies,
+  nativeDependencyNames
+}) => {
+  if (options.forceUpdateNodeModules) return true;
+  // Verify if any previously created module package.json is up to date
+  // by checking that it contains all native dependency versions defined in react native package.json
+  const upToDate = await checkNativeModulesUpToDate({
+    modulePath,
+    allReactNativeProjectDependencies,
+    nativeDependencyNames
+  });
+  return !upToDate;
+}
+
+const getNeedToUpdateTemplates = async ({
+  needToInstallNativeNodeModulesWithFixes,
+  options,
+  modulePath
+}) => {
+  if (needToInstallNativeNodeModulesWithFixes || options.forceUpdateTemplates || FORCE_UPDATE_TEMPLATES) return true;
+  // Verify if the project was previously created with a different .rnmrc.json (only comparing android section)
+  // Previously used android part of .rnmrc.json is stored at modulePath with name: used-android.rnmrc.json
+  const rnmConfigUpToDate = await checkRNMConfigUpToDate({
+    modulePath,
+    platform: 'android'
+  });
+  return !rnmConfigUpToDate;
 }

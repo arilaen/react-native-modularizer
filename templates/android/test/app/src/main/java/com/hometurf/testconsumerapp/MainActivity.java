@@ -1,7 +1,7 @@
 package com.hometurf.testconsumerapp;
 
 import androidx.appcompat.app.AppCompatActivity;
-import com.hometurf.mobileapp.InAppHomeTurfReactNativeActivity;
+import {{{groupId}}}.{{{moduleName}}}ReactNativeActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -15,9 +15,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
     }
 
-    public void enterHomeTurf(View view) {
-        // Start HomeTurf application and set contentView
-        Intent i = new Intent(MainActivity.this, InAppHomeTurfReactNativeActivity.class);
+    public void enter{{{moduleName}}}(View view) {
+        // Start application and set contentView
+        Intent i = new Intent(MainActivity.this, {{{moduleName}}}ReactNativeActivity.class);
         i.putExtra("teamId", "4254d319-1bc7-4f81-b4ab-b5e6f3402b69");
         MainActivity.this.startActivity(i);
     }

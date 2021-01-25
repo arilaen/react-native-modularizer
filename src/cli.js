@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import {buildAndroid} from './android';
 import initialize from './initialize';
+import { nameInMessage } from './utils/logHelpers';
 
 const BUILD_TASK = 'build';
 const INIT_TASK = 'init';
@@ -55,7 +56,7 @@ async function promptForMissingOptions(options) {
   } else if (options.task === HELP_TASK) {
     console.log(chalk.blue('Available tasks:'));
     allTasks.forEach(task => {
-      console.log(`   ${chalk.green(task)}`);
+      console.log(`   ${nameInMessage(task)}`);
     })
   } else {
     throw new Error("Invalid task specified; run `help` to see all available tasks.");

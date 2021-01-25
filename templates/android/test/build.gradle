@@ -12,10 +12,8 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:{{{androidGradlePlugin}}}'
-        classpath 'com.google.gms:google-services:4.3.4'
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.4.1'
 {{#customBuildDependencies}}
-    classpath '{{.}}'
+        classpath '{{.}}'
 {{/customBuildDependencies}}
     }
 }
@@ -23,23 +21,23 @@ buildscript {
 allprojects {
     repositories {
       mavenLocal()
-        maven {
-            // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-            url("$rootDir/{{{relativePathFromProjectToNodeModules}}}/react-native/android")
+      maven {
+          // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+          url("$rootDir/{{{moduleName}}}/node_modules/react-native/android")
 
-        }
-        maven {
-            // Android JSC is installed from npm
-            url("$rootDir/{{{relativePathFromProjectToNodeModules}}}/node_modules/jsc-android/dist")
-        }
+      }
+      maven {
+          // Android JSC is installed from npm
+          url("$rootDir/{{{moduleName}}}/node_modules/jsc-android/dist")
+      }
 {{#customMavenUrls}}
-        maven {
-          url "{{{.}}}"
-        }
+      maven {
+        url "{{{.}}}"
+      }
 {{/customMavenUrls}}
-        google()
-        jcenter()
-        maven { url 'https://www.jitpack.io' }
+      google()
+      jcenter()
+      maven { url 'https://www.jitpack.io' }
     }
 
     tasks.withType(JavaCompile) {

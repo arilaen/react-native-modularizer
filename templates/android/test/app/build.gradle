@@ -1,6 +1,6 @@
 apply plugin: "com.android.application"
 
-project.ext.react = [ enableHermes: true, bundleInDebug: false ]
+project.ext.react = [ enableHermes: true, bundleInDebug: true ]
 
 android {
     compileSdkVersion rootProject.ext.get('compileSdkVersion')
@@ -28,19 +28,18 @@ android {
 }
 
 dependencies {
+  implementation project(':{{{moduleName}}}')
   implementation fileTree(dir: 'libs', include: '*.jar')
   implementation "com.facebook.react:react-native:{{{reactNativeVersion}}}"
-  implementation 'com.facebook.soloader:soloader:0.9.0'
-  implementation 'com.google.firebase:firebase-bom:26.3.0'
-  implementation 'com.google.firebase:firebase-analytics:18.0.1'
+{{#extraLibDependencies}}
+  implementation "{{{.}}}"
+{{/extraLibDependencies}}
 {{#libDependencies}}
   implementation {{{.}}}
 {{/libDependencies}}
-  def hermesPath = "{{{relativePathFromLibToNodeModules}}}/node_modules/hermes-engine/android/";
+  def hermesPath = "../{{{moduleName}}}/node_modules/hermes-engine/android/";
   debugImplementation files(hermesPath + "hermes-debug.aar")
   releaseImplementation files(hermesPath + "hermes-release.aar")
-  // debugImplementation "com.hometurf.mobileapp:final-debug:1.0@aar"
-  // releaseImplementation "com.hometurf.mobileapp:final-release:1.0@aar"
 }
 
 task copyDownloadableDepsToLibs(type: Copy) {
@@ -48,10 +47,11 @@ task copyDownloadableDepsToLibs(type: Copy) {
     into 'libs'
 }
 
-apply from: "{{{relativePathFromLibToNodeModules}}}/react-native/react.gradle"
-apply from: "{{{relativePathFromLibToNodeModules}}}/react-native-code-push/android/codepush.gradle"
+// apply from: "../{{{moduleName}}}/node_modules/react-native/react.gradle"
+// apply from: "../{{{moduleName}}}/node_modules/react-native-code-push/android/codepush.gradle"
 
-apply plugin: 'com.google.gms.google-services'
-apply plugin: 'com.google.firebase.crashlytics'
+{{#customPlugins}}
+apply plugin: "{{.}}"
+{{/customPlugins}}
 
 googleServices { disableVersionCheck = true }
